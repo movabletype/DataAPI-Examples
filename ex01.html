@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <title>Fetch Google Analytics Data via Data API</title>
+    <link href="bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="datepicker/css/datepicker.css" rel="stylesheet">
+    <script type="text/javascript" src="js/jquery.min.js"></script>
+    <script type="text/javascript" src="bootstrap/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="datepicker/js/bootstrap-datepicker.js"></script>
+    <script type="text/javascript" src="js/mt-data-api.min.js"></script>
+    <script>
+      jQuery( function() {
+
+        // DatePicker
+        jQuery(document).ready( function() {
+          jQuery('.date-picker').each( function() {
+            jQuery(this).datepicker({
+              format: 'yyyy-mm-dd'
+            });
+          });
+        });
+
+        jQuery('#submit-button').click( function() {
+
+          //Initialize
+          jQuery('#result-table-body').children().remove();
+
+          var api = new MT.DataAPI({
+            baseUrl: jQuery('#dataapi-uri').val(),
+            clientId: "DataAPIExample01"
+          });
+
+          // Sign in
+          api.authenticate({
+            username: jQuery('#dataapi-username').val(),
+            password: jQuery('#dataapi-password').val()
+          }, function(response) {
+            if (response.error) {
+              console.log(response);
+              return;
+            }
+
+            api.storeTokenData(response);
+
+            // Fetch site data to get site url
+            var site_id = jQuery('#data-site-id').val();
+            api.getBlog(site_id, {fields: "url"}, function (response) {
+              if (response.error) {
+                console.log(response);
+                return;
+              }
+              var site_url = response.url;
+              site_url.slice(0, -1); // Removing trailing slash
+
+              // Fetch statistics
+              var condition = {
+                startDate: jQuery('#start-date').val(),
+                endDate:jQuery('#end-date').val(),
+                limit: jQuery('#data-limit').val()
+              };
+              if ( jQuery('#data-path').val() ) {
+                condition['path'] = jQuery('#data-path').val();
+              }
+              api.listStatsPageviewsForPath(site_id, condition, function(response) {
+                if (response.error) {
+                  console.log(response);
+                  return;
+                }
+
+                var result = '';
+                var i = 1;
+                jQuery(response.items).each( function() {
+                  jQuery('#result-table-body').append("<tr>"
+                    + "<td>"+ i + "</td>"
+                    + i + "<td>" + this.title
+                    + " <a href='" + site_url + this.path +"' target='_blank'>View</a></td>"
+                    + "</tr>");
+                  i++;
+                });
+              });
+            });
+          });
+        });
+      });
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <div class="col-md12">
+          <form>
+            <fieldset>
+              <legend>Fetch Google Analytics Data via Data API</legend>
+              <div id="msg"></div>
+              <div class="form-group">
+                <label for="dataapi-uri">Location for Data API (*)</label>
+                <input type="text" class="form-control" id="dataapi-uri" name="dateapi-uri" placeholder="URI for your Data API.">
+              </div>
+              <div class="form-group">
+                <label for="dataapi-username">Username (*)</label>
+                <input type="text" class="form-control" id="dataapi-username" name="dateapi-username" placeholder="Your username for sign into Data API.">
+              </div>
+              <div class="form-group">
+                <label for="dataapi-password">Password (*)</label>
+                <input type="password" class="form-control" id="dataapi-password" name="dateapi-password" placeholder="Your password for sign into Data API.">
+              </div>
+              <div class="form-group">
+                <label for="data-site-id">Site ID (*)</label>
+                <input type="text" class="form-control" id="data-site-id" name="data-site-id" placeholder="Site ID">
+              </div>
+              <div class="form-group">
+                <label for="start-date">Start Date (*)</label>
+                <input type="text" class="form-control date-picker" id="start-date" name="start-date" placeholder="yyyy-mm-dd">
+              </div>
+              <div class="form-group">
+                <label for="end-date">End Date (*)</label>
+                <input type="text" class="form-control date-picker" id="end-date" name="end-date" placeholder="yyyy-mm-dd">
+              </div>
+              <div class="form-group">
+                <label for="data-limit">Limit (*)</label>
+                <input type="text" class="form-control" id="data-limit" name="data-limit" placeholder="Maximum number" value="10">
+              </div>
+              <div class="form-group">
+                <label for="data-path">Path</label>
+                <input type="text" class="form-control" id="data-path" name="data-path" placeholder="Target path">
+              </div>
+              <button type="button" id="submit-button" class="btn btn-primary">Submit</button>
+            </fieldset>
+          </form>
+        </div>
+        <div class="col-md12">
+          <div>
+            <table class='table table-striped' id="result-table">
+              <thead>
+                <tr>
+                  <th>No.</th>
+                  <th>Title</th>
+                </tr>
+              </thead>
+              <tbody id="result-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
